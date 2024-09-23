@@ -16,7 +16,7 @@
 !      use hmc2wilsonferms
       use hmc2domwallferms
       use hmc2olferms
-!      use rhmc1domwallferm
+      use rhmc1domwallferm
       implicit none
 
       logical GZERO
@@ -31,29 +31,21 @@
       end if
 
       if (HMCtype.eq.3) then
-!        call initRHMC()
-        print *,"uncomment"
-        stop
+        call initRHMC()
       endif
 
-!     loop over Nsweep Hybrid MC steps
+!     loop over Nsweep Hybrid MC trajectories
       Naccepted=0
       do isw=1,Nswp
         print *,"sweep:",isw," of ",Nswp
         thetat=theta
 !        call march2DW(dH,thetat)
         if (HMCtype.eq.1) then
-!          call march2DomWallFerms(dH,thetat)
-          print *,"2 domwall ferms not compiled"
-!          stop
+          call march2DomWallFerms(dH,thetat)
         elseif (HMCtype.eq.2) then
           call march2OLFerms(dH,thetat)
-!          print *,"2 ol ferms not compiled"
-!          stop
         elseif (HMCtype.eq.3) then
-!          call march1DomWallFerm(dH,thetat)
-          print *,"1 domwall ferm not compiled"
-          stop
+          call march1DomWallFerm(dH,thetat)
         end if
         write(199,*) "dH:",dH
         flush(199)
@@ -75,9 +67,6 @@
 
       y=exp(dH) ! dH = Hprev - Hproposed
       x=urv()
-      if (DUPLICATE) then
-        read(12,*) x
-      endif
       print *,"dH:",dH
       print *,"accept if x:",x," < exp(dH)=y:",y
       if (x.lt.y) then

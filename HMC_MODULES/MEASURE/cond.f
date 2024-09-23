@@ -6,7 +6,9 @@
       use options
       use IOmodule
       use gaugefield
+      use ratfuncs
       implicit none
+      type(sgnratfunc) :: SRF
       contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine measureCondensateInstance()
@@ -19,7 +21,8 @@
         if (dwkernel.eq.1) then
           call evalCondNoisy_DomWall_Shamir(u,pbp)
         elseif ((dwkernel.eq.2).or.(dwkernel.eq.3))then
-          call evalCondNoisy_DomWall_Wilson(u,pbp)
+!          call evalCondNoisy_DomWall_Wilson(u,pbp)
+          call evalCondNoisy_OL_Wilson(u,pbp,SRF)
         endif
         pbptot=pbptot+pbp
       end do
@@ -132,4 +135,57 @@ c      use rvmodule
       return
       end subroutine evalCondNoisy_DomWall_Wilson
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine evalCondNoisy_OL_Wilson(u,pbp,SRF)
+      use rvmodule
+      use ratfuncs
+      use overlap
+      implicit none
+      complex(prc) u(Nv,3)
+      complex(prc) pbp
+      integer j
+      type(sgnratfunc) :: SRF
+      complex(prc),dimension(Nv,4) :: eta,IDR
+      integer idx
+      complex(prc) trcomp,denom
+
+      pbp=czero
+      do idx=1,4
+        eta=czero
+        call setCGRVs(Nv,eta(:,idx))
+!        call IDOLop3(eta,IDR,u,.false.,baremass,SRF) ! separated multishift version
+        call IDOLMW(eta,IDR,u,.false.,baremass,SRF)
+!        IDR=conjg(eta)*IDR
+        IDR=conjg(eta)*(IDR-eta) ! note this crashes for free field - check this
+        if (MTYPE.eq.1) then
+!          trcomp=sum(IDR(:,idx)-one)/(one-baremass)
+          trcomp=sum(IDR(:,idx))/(one-baremass)
+        elseif (MTYPE.eq.3) then ! assumes g3=diag(1 1 -1 -1)
+          if (idx.eq.1 .or. (idx.eq.2)) then
+            denom=cmplx(-baremass,one)
+          else
+            denom=cmplx(-baremass,-one)
+          endif
+!          trcomp=sum(IDR(:,idx)-one)/denom
+          trcomp=sum(IDR(:,idx))/denom
+        elseif (MTYPE.eq.4) then ! assumes g3=diag(1 1 -1 -1)
+          if (idx.eq.1 .or. (idx.eq.2)) then
+            denom=-cmplx(baremass,one)
+          else
+            denom=-cmplx(baremass,-one)
+          endif
+!          trcomp=sum(IDR(:,idx)-one)/denom
+          trcomp=sum(IDR(:,idx))/denom
+        else
+          print *,"MASS OPTION NOT AVAILABLE IN evalCondNoisy_OL",MTYPE
+          stop
+        endif
+!        print *,trcomp
+        pbp=pbp+trcomp
+      end do
+      pbp=pbp/Nv
+      print *,"pbp: ",pbp 
+
+      return
+      end subroutine evalCondNoisy_OL_Wilson
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       end module condmod

@@ -30,19 +30,10 @@
       end if
 
       call init()
-
-      DUPLICATE=.false.
-      if (DUPLICATE) then
-        open(unit=112,file='IN/fort.112',status='unknown')
-        read(112,*) theta,u
-        close(112)
-        print *,theta
-        open(unit=12,file='IN/rvs.dat',status='unknown')
-      endif
       do j=1,Naux
         print *,"make field ",j," of ",Naux
         call makeGaugeField(.false.)
-!        call measureCondensateInstance()
+        call measureCondensateInstance()
       end do
 !      call  averageCondensate();
 
@@ -60,9 +51,11 @@
       use gaugefield
       use zolomodule
       use dwcoeffs
+      use condmod
       implicit none
       real(prc) tav
       type(zolotarev) :: zolo
+      real(prc) lmin,lmax
 
       call initRVs(.false.,.false.,0) ! uses a time based seed initialiser
 
@@ -74,6 +67,7 @@
       call init_timer()
 
       HMCtype=2 ! 1:HMC-DW, 2: HMC-OL, 3:RHMC-DW
+
       Nferms=1 ! hmmm ... take this out, beta controls this too
       GAUGETYPE=2 ! 1=compact 2=non-compact link field
       MDW=one ! domain wall height
@@ -84,13 +78,13 @@
       baremass=0.02d0
       gbeta=1.0
 
-      HMC_etime=0.2 
-      HMC_dt=0.02
-      HMC_tsmax=1000
+      HMC_etime=0.2 ! average total time for HMC trajectory
+      HMC_dt=0.02  ! time step size for HMC trajectory
+      HMC_tsmax=1000 ! maximum no of timesteps before forcing end of HMC tranjectory
       QUENCHED=.false.
 
-      Naux=10
-      Nswp=5
+      Naux=10 ! no of auxiliary fields to be generated
+      Nswp=5 ! how many trajectories for each each field
 
       open(unit=11,file="caseInput.dat",status='unknown')
       read(11,*) HMC_dt,gbeta,MDW,baremass,MTYPE,tsav,DWkernel,QUENCHED
@@ -125,8 +119,12 @@
       call coef(u,theta)
 
       omega=1.0
-      if (dwkernel.eq.3) then
-        call setZolo(5d-2,5d0,Ls,zolo)
+      if (dwkernel.eq.2) then
+        call setHTcoeffs(Ls,SRF)
+      else if (dwkernel.eq.3) then
+        lmin=5d-2 ; lmax=5d0
+        call setZoloCoeffs(Ls,SRF,lmin,lmax)
+        call setZolo(lmin,lmax,Ls,zolo)
         call getRoots(zolo)
         omega=one/zolo%roots
         print *,"omega:",omega

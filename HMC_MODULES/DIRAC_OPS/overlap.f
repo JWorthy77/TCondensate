@@ -1,4 +1,4 @@
-      module overlap ! code used for main results in thesis
+      module overlap 
       use pacc
       use arraysizes
       use numbers
@@ -32,12 +32,7 @@
 
       if (MTYPE.eq.1) then ! DOL = (1+m) + (1-m).V
 
-!        if (DAGGER .eq. .false.) then
-          call VOLMWpf(R,DR,u,DAGGER,-MDW,SRF)
-!        elseif (DAGGER .eq. .true.) then
-!          call VOLMWpfDag(R,DR,u,DAGGER,-MDW,SRF)
-!        endif
-        
+        call VOLMWpf(R,DR,u,DAGGER,-MDW,SRF)
         DR=(one+mass)/two*R + (one-mass)/two*DR
 
       elseif (MTYPE.eq.3) then ! DOL = (1+i.m.g3) + (1-i.m.g3).V
@@ -58,7 +53,7 @@
           DR=DL+DR
         endif
 
-      elseif (MTYPE.eq.4) then 
+      elseif (MTYPE.eq.4) then ! this corresponds tp dw MTYPE=3
 
         if (.not.DAGGER) then ! DOL=(1+im.g3) + V(1-im.g3)
           TMP=R
@@ -79,7 +74,6 @@
         endif
 
       elseif (MTYPE.eq.5) then ! DOL = (1-i.m.g3) + (1+i.m.g3).V
-!       this is not the form corresponding to the domain wall formulation MTYPE=3
         if (.not.DAGGER) then
           call VOLMWpf(R,VR,u,DAGGER,-MDW,SRF)
           DL=(R+VR)/two
@@ -137,42 +131,6 @@
       return
       end subroutine VOLMWpf
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine VOLMWpfDag(RR,S,u,DAGGER,dwmass,SRF) 
-      use options
-!     approximate Wilson Voverlap using partial fraction rational functions with a multishift cg method
-      implicit none
-      complex(prc) RR(Nv,4),S(Nv,4)
-      complex(prc) u(Nv,3)
-      logical DAGGER
-      real(prc) dwmass
-      type(sgnratfunc),intent(in) :: SRF
-      complex(prc) add,coef
-      complex(prc) TMP1(Nv,4),TMP2(Nv,4)
-      integer j,p,nn,nd,nf
-      real(prc) mult
-      if(VB_OL)then ; print *,"VOLMWpf" ; endif
-
-      associate(front => SRF%pfrf%front%coeffs,
-     &          num => SRF%frf%num%zeros,
-     &          denom => SRF%pfrf%denom%zeros,
-     &          pf => SRF%pfrf%pf)
-
-      nn=size(num)
-      nd=size(denom)
-      if(VB_OL)then ; print *,"nn",nn,"nd",nd ; endif
-      nf=nn-nd+1
-      call DWilson(RR,TMP1,u,DAGGER,dwmass)
-      S=zero
-      if (nf.ge.1) then ! it should only ever be 0 or 1
-        S=front(1)*TMP1
-      end if
-      call MSCGW(TMP1,S,u,.false.,dwmass,SRF) ! S=S+...
-      S=SRF%mult*S
-
-      end associate
-      return
-      end subroutine VOLMWpfDag
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine MSCGW(rhs,DR,u,DAGGER,dwmass,SRF)
       use options
       use countmod
@@ -183,7 +141,6 @@
       logical DAGGER
       real(prc) dwmass
       type(sgnratfunc),intent(in) :: SRF
-c      procedure(),pointer :: Mptr
       complex(prc) Zm1ns(Nv,4)
       integer ns
       integer k,o,it,maxit,nsr
@@ -224,7 +181,6 @@ c      procedure(),pointer :: Mptr
         alpha=drr/dopr(P(:,:,1),B)
         Rp1=R-alpha*B
         drp1rp1=dopr(Rp1,Rp1)
-!        if(VB_OL)then ; print *,"drp1rp1:",drp1rp1 ; endif
         betap1=drp1rp1/drr
         Z(:,:,1)=Z(:,:,1)+alpha*P(:,:,1)
         P(:,:,1)=Rp1+betap1*P(:,:,1)
